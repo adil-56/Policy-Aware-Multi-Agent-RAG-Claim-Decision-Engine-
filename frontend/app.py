@@ -9,7 +9,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from frontend.components.claim_upload import render_upload_section
 from frontend.components.results_view import render_results
 
-API_URL = "http://localhost:8000/api/v1/analyze"
+# Read API_URL from Streamlit secrets if deployed, else fallback to localhost
+if "API_URL" in st.secrets:
+    API_URL = st.secrets["API_URL"]
+else:
+    API_URL = "http://localhost:8000/api/v1/analyze"
 
 st.set_page_config(page_title="Multi-Agent Policy Engine", layout="wide")
 st.title("Policy-Aware Multi-Agent RAG Claim Decision Engine")
