@@ -29,6 +29,11 @@ if claim_data:
     if st.button("Run Analysis", type="primary"):
         with st.spinner("Agents are analyzing the claim..."):
             try:
+                # If user uploaded an array of cases (like public_test_cases.json), pick the first one
+                if isinstance(claim_data, list) and len(claim_data) > 0:
+                    claim_data = claim_data[0]
+                    st.info("Multiple claims detected in file. Analyzing the first claim.")
+
                 # Expecting 'case_id' in claim_data or auto-generating one
                 case_id = claim_data.get("case_id", "CASE_UPLOAD")
                 payload = {
