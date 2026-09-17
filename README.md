@@ -1,3 +1,12 @@
+---
+title: Rag Engine Backend
+emoji: 🚀
+colorFrom: blue
+colorTo: indigo
+sdk: gradio
+app_file: app.py
+pinned: false
+---
 # Policy-Aware Multi-Agent RAG Claim Decision Engine
 
 This repository contains a production-style, multi-agent RAG system built to evaluate health insurance claims against specific policy documents. It emphasizes rigorous evidence grounding, explicit policy citations, and strict abstention (`NEEDS_REVIEW`) over LLM hallucinations.
