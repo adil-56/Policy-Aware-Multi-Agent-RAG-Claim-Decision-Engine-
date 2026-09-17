@@ -16,11 +16,11 @@ class CaseAnalysisAgent:
         logger.info(f"Analyzing case {case_id}")
         
         missing_docs = []
-        provided_docs = claim_data.get("documents_provided", [])
+        provided_docs = claim_data.get("documents", [])
         if "discharge_summary" not in [d.lower() for d in provided_docs]:
             missing_docs.append("discharge_summary")
-        if "final_bill" not in [d.lower() for d in provided_docs]:
-            missing_docs.append("final_bill")
+        if "itemized_bill" not in [d.lower() for d in provided_docs]:
+            missing_docs.append("itemized_bill")
             
         # Determine decision dimensions (e.g. is this a day-care or hospitalization?)
         dimensions = ["eligibility", "coverage", "financial"]
