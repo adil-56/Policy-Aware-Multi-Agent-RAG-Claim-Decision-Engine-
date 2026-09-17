@@ -2,8 +2,7 @@ from typing import List, Dict, Any
 import numpy as np
 from rank_bm25 import BM25Okapi
 import chromadb
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from sentence_transformers import CrossEncoder
+from langchain_openai import OpenAIEmbeddings
 from backend.core.config import settings
 from backend.core.exceptions import RetrievalException
 from backend.models.state import EvidenceItem, Citation
@@ -14,18 +13,14 @@ logger = logging.getLogger(__name__)
 class HybridRetriever:
     """
     Implements a Hybrid Retrieval Engine:
-    1. Dense Vector Search (ChromaDB)
+    1. Dense Vector Search (ChromaDB + OpenAI)
     2. Sparse Keyword Search (BM25)
     3. Reciprocal Rank Fusion (RRF)
-    4. Cross-Encoder Reranking (BAAI/bge-reranker-base)
     """
     def __init__(self, persist_directory: str = settings.CHROMA_PERSIST_DIRECTORY):
-        self.embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        self.embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
         self.chroma_client = chromadb.PersistentClient(path=persist_directory)
         self.collection = self.chroma_client.get_or_create_collection(name="policy_chunks")
-        
-        # Initialize CrossEncoder for Reranking
-        self.reranker = CrossEncoder(settings.RERANKER_MODEL_NAME)
         
         # BM25 internal state (in-memory for this implementation)
         self.corpus: List[Dict[str, Any]] = []
@@ -109,7 +104,7 @@ class HybridRetriever:
 
     def retrieve(self, query: str, top_k: int = 5) -> List[EvidenceItem]:
         """
-        Executes Hybrid retrieval: Dense + BM25 -> RRF -> BAAI Reranker -> Return top_k.
+        Executes Hybrid retrieval: Dense + BM25 -> RRF -> Return top_k.
         Returns typed EvidenceItem objects.
         """
         try:
@@ -120,15 +115,10 @@ class HybridRetriever:
             if not fused:
                 return []
                 
-            # Reranking with CrossEncoder
-            pairs = [[query, doc["text"]] for doc in fused]
-            rerank_scores = self.reranker.predict(pairs)
-            
-            # Attach scores and sort
+            # Assign dummy relevance score since Reranker is removed
             for i, doc in enumerate(fused):
-                doc["relevance_score"] = float(rerank_scores[i])
+                doc["relevance_score"] = 1.0 / (i + 1)
                 
-            fused.sort(key=lambda x: x["relevance_score"], reverse=True)
             final_top = fused[:top_k]
             
             evidence_items = []

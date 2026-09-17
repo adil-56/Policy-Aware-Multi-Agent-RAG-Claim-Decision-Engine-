@@ -11,6 +11,15 @@ def get_retriever() -> HybridRetriever:
     global _retriever
     if _retriever is None:
         _retriever = HybridRetriever()
+        # Auto-index if collection is empty
+        if _retriever.collection.count() == 0:
+            import os
+            from backend.retrieval.indexer import PolicyIndexer
+            pdf_path = os.path.join(os.path.dirname(__file__), "..", "..", "policy", "USGIC-CSCIndividualHealthInsurance_2017-2018.pdf")
+            if os.path.exists(pdf_path):
+                indexer = PolicyIndexer(pdf_path)
+                chunks = indexer.extract_text_chunks()
+                _retriever.add_documents(chunks)
     return _retriever
 
 def get_workflow():
