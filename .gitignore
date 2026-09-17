@@ -11,8 +11,6 @@ venv/
 ENV/
 
 # Vector DB
-chroma_db/
-.chroma/
 
 # Logs and databases
 *.log
