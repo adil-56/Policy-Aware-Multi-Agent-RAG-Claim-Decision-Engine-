@@ -27,13 +27,19 @@ class PolicyEvidenceAgent:
         ]
         
         all_evidence = []
+        retrieval_errors = []
         for q in queries:
             try:
                 items = self.retriever.retrieve(query=q, top_k=3)
                 all_evidence.extend(items)
             except Exception as e:
                 logger.warning(f"Retrieval failed for query '{q}': {e}")
-            
+                retrieval_errors.append(str(e))
+                
+        if not all_evidence and retrieval_errors:
+            # If we got absolutely no evidence and we had errors (like OpenAI API Key invalid),
+            # we must surface this to the user so it doesn't fail silently.
+            raise RuntimeError(f"RAG Retrieval completely failed. Errors: {retrieval_errors[0]}")
         # Deduplicate evidence based on chunk_id
         seen = set()
         unique_evidence = []
