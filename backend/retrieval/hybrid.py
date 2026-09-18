@@ -2,7 +2,7 @@ from typing import List, Dict, Any
 import numpy as np
 from rank_bm25 import BM25Okapi
 import chromadb
-from langchain_openai import OpenAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from backend.core.config import settings
 from backend.core.exceptions import RetrievalException
 from backend.models.state import EvidenceItem, Citation
@@ -18,7 +18,7 @@ class HybridRetriever:
     3. Reciprocal Rank Fusion (RRF)
     """
     def __init__(self, persist_directory: str = settings.CHROMA_PERSIST_DIRECTORY):
-        self.embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+        self.embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
         self.chroma_client = chromadb.PersistentClient(path=persist_directory)
         self.collection = self.chroma_client.get_or_create_collection(name="policy_chunks")
         
