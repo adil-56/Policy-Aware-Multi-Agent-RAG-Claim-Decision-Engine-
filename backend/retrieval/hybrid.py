@@ -3,6 +3,7 @@ import numpy as np
 from rank_bm25 import BM25Okapi
 import chromadb
 from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
+from flashrank import Ranker, RerankRequest
 from backend.core.config import settings
 from backend.core.exceptions import RetrievalException
 from backend.models.state import EvidenceItem, Citation
@@ -19,6 +20,8 @@ class HybridRetriever:
     """
     def __init__(self, persist_directory: str = settings.CHROMA_PERSIST_DIRECTORY):
         self.embeddings = FastEmbedEmbeddings()
+        # Initialize a lightweight, free ONNX CPU reranker
+        self.ranker = Ranker()
         self.chroma_client = chromadb.PersistentClient(path=persist_directory)
         self.collection = self.chroma_client.get_or_create_collection(name="policy_chunks")
         
@@ -115,26 +118,35 @@ class HybridRetriever:
             if not fused:
                 return []
                 
-            # Assign dummy relevance score since Reranker is removed
-            for i, doc in enumerate(fused):
-                doc["relevance_score"] = 1.0 / (i + 1)
+            # Rerank the fused results using FlashRank
+            passages = []
+            for doc in fused:
+                passages.append({
+                    "id": doc["chunk_id"],
+                    "text": doc["text"],
+                    "meta": doc["metadata"]
+                })
                 
-            final_top = fused[:top_k]
+            request = RerankRequest(query=query, passages=passages)
+            reranked_results = self.ranker.rerank(request)
+            
+            # reranked_results is a list of dicts sorted by relevance, with a "score" key
+            final_top = reranked_results[:top_k]
             
             evidence_items = []
             for doc in final_top:
                 citation = Citation(
-                    page=doc["metadata"].get("page", "Unknown"),
-                    section="Auto-extracted", # Can be improved via indexer metadata
-                    chunk_id=doc["chunk_id"],
-                    source=doc["metadata"].get("source", "Unknown"),
+                    page=doc["meta"].get("page", "Unknown"),
+                    section="Auto-extracted",
+                    chunk_id=doc["id"],
+                    source=doc["meta"].get("source", "Unknown"),
                     text=doc["text"]
                 )
                 evidence_items.append(EvidenceItem(
                     category="HybridSearch",
                     content=doc["text"],
                     citation=citation,
-                    relevance_score=doc["relevance_score"]
+                    relevance_score=float(doc["score"])
                 ))
             return evidence_items
             
