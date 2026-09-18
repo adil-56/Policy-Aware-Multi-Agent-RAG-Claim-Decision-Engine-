@@ -20,22 +20,37 @@ class PolicyIndexer:
         Extracts text blocks from the PDF while attempting to preserve page numbers
         and structure. Returns a list of chunks ready for vector indexing.
         """
+        import os
         try:
             doc = fitz.open(self.pdf_path)
             chunks = []
+            current_section = "General Policy Guidelines"
+            filename = os.path.basename(self.pdf_path)
+            
             for page_num in range(len(doc)):
                 page = doc.load_page(page_num)
                 # Extract blocks (text blocks usually have type 0)
                 blocks = page.get_text("blocks")
                 for idx, b in enumerate(blocks):
                     text = b[4].strip()
+                    if not text:
+                        continue
+                        
+                    # Basic heuristic for headings: short text, uppercase or bold-like numbering
+                    lines = text.split('\n')
+                    if len(lines) == 1 and len(text) < 80:
+                        # e.g., "STANDARD TERMS AND CONDITIONS:" or "(C) Claims Processing"
+                        if text.isupper() or text.startswith("(") or text.endswith(":"):
+                            current_section = text
+                            
                     # Filter out very small artifacts or empty blocks
                     if len(text) > 20:
                         chunks.append({
                             "chunk_id": f"p{page_num+1}_b{idx}",
                             "page": str(page_num + 1),
+                            "section": current_section,
                             "text": text,
-                            "source": self.pdf_path.split("/")[-1]
+                            "source": filename
                         })
             return chunks
         except Exception as e:

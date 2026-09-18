@@ -36,7 +36,7 @@ class HybridRetriever:
             
         ids = [doc["chunk_id"] for doc in documents]
         texts = [doc["text"] for doc in documents]
-        metadatas = [{"page": doc["page"], "source": doc["source"]} for doc in documents]
+        metadatas = [{"page": doc["page"], "source": doc["source"], "section": doc.get("section", "Unknown")} for doc in documents]
         
         self.collection.add(
             ids=ids,
@@ -81,7 +81,7 @@ class HybridRetriever:
                 docs.append({
                     "chunk_id": doc["chunk_id"],
                     "text": doc["text"],
-                    "metadata": {"page": doc["page"], "source": doc["source"]},
+                    "metadata": {"page": doc["page"], "source": doc["source"], "section": doc.get("section", "Unknown")},
                     "sparse_score": float(scores[idx])
                 })
         return docs
@@ -137,7 +137,7 @@ class HybridRetriever:
             for doc in final_top:
                 citation = Citation(
                     page=doc["meta"].get("page", "Unknown"),
-                    section="Auto-extracted",
+                    section=doc["meta"].get("section", "Unknown"),
                     chunk_id=doc["id"],
                     source=doc["meta"].get("source", "Unknown"),
                     text=doc["text"]
